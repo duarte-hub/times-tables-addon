@@ -1,6 +1,6 @@
 name: "Times Tables"
 description: "Interactive times tables learning game for kids, with Home Assistant reward automations"
-version: "1.1.0"
+version: "1.2.0"
 slug: "times_tables"
 init: false
 arch:

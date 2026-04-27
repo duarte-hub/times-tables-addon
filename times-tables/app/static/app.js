@@ -23,7 +23,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     reward_automation: "",
   };
   try {
-    const res = await fetch("/api/options");
+    const res = await fetch("./api/options");
     if (res.ok) config = await res.json();
   } catch (_) { /* dev / offline */ }
 
@@ -242,7 +242,7 @@ function starsFor(score) {
    ============================================================ */
 async function fireReward(data) {
   try {
-    await fetch("/api/reward", {
+    await fetch("./api/reward", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
