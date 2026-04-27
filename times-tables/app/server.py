@@ -1,6 +1,6 @@
 """
 Times Tables Addon - Flask backend
-Serves the frontend and fires Home Assistant events via the Supervisor API.
+Serves the frontend and fires Home Assistant automations via the Supervisor API.
 """
 
 import os
@@ -8,7 +8,7 @@ import json
 import requests
 from flask import Flask, send_from_directory, jsonify, request
 
-app = Flask(__name__, static_folder="/app/static")
+app = Flask(__name__)
 
 SUPERVISOR_TOKEN = os.environ.get("SUPERVISOR_TOKEN", "")
 HA_API = "http://supervisor/core/api"
@@ -20,7 +20,11 @@ def get_options():
         with open(OPTIONS_FILE) as f:
             return json.load(f)
     except Exception:
-        return {"player_name": "Player"}
+        return {
+            "player_name": "Player",
+            "allowed_tables": list(range(1, 13)),
+            "reward_automation": "",
+        }
 
 
 @app.route("/")
@@ -30,26 +34,32 @@ def index():
 
 @app.route("/api/options")
 def options():
-    return jsonify(get_options())
+    opts = get_options()
+    return jsonify({
+        "player_name": opts.get("player_name", "Player"),
+        "allowed_tables": opts.get("allowed_tables", list(range(1, 13))),
+        "reward_automation": opts.get("reward_automation", ""),
+    })
 
 
 @app.route("/api/reward", methods=["POST"])
 def trigger_reward():
     """
-    Called by the frontend when a reward should be triggered.
-    Fires the 'times_tables_reward' event in Home Assistant.
-    Event data includes: player, level, score, total, streak
+    Called by the frontend when a reward is earned.
+    Triggers the automation configured in addon settings,
+    or fires a generic times_tables_reward event as fallback.
     """
     data = request.json or {}
     opts = get_options()
+    automation = opts.get("reward_automation", "").strip()
+
     event_data = {
         "player": opts.get("player_name", "Player"),
         **data,
     }
 
     if not SUPERVISOR_TOKEN:
-        # Running outside HA — just return success for dev/testing
-        print(f"[DEV] Would fire event: times_tables_reward with {event_data}")
+        print(f"[DEV] Reward earned. Would trigger: '{automation}' with {event_data}")
         return jsonify({"success": True, "dev_mode": True})
 
     try:
@@ -57,17 +67,36 @@ def trigger_reward():
             "Authorization": f"Bearer {SUPERVISOR_TOKEN}",
             "Content-Type": "application/json",
         }
-        response = requests.post(
-            f"{HA_API}/events/times_tables_reward",
-            headers=headers,
-            json=event_data,
-            timeout=5,
-        )
+
+        if automation:
+            # Trigger the specific automation chosen in addon config
+            response = requests.post(
+                f"{HA_API}/services/automation/trigger",
+                headers=headers,
+                json={"entity_id": automation},
+                timeout=5,
+            )
+        else:
+            # No automation set — fire a generic event instead
+            response = requests.post(
+                f"{HA_API}/events/times_tables_reward",
+                headers=headers,
+                json=event_data,
+                timeout=5,
+            )
+
         response.raise_for_status()
-        return jsonify({"success": True, "status": response.status_code})
+        return jsonify({"success": True})
+
     except requests.RequestException as e:
-        print(f"[ERROR] Failed to fire HA event: {e}")
+        print(f"[ERROR] Failed to trigger reward: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+# Serve all other static files (style.css, app.js, etc.)
+@app.route("/<path:filename>")
+def static_files(filename):
+    return send_from_directory("/app/static", filename)
 
 
 if __name__ == "__main__":

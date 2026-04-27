@@ -4,88 +4,96 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Times Tables</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- CONFETTI CANVAS -->
 <canvas id="confetti-canvas"></canvas>
 
-<!-- SCREENS -->
 <div id="app">
 
-  <!-- WELCOME SCREEN -->
-  <div id="screen-welcome" class="screen active">
-    <div class="card welcome-card">
-      <div class="logo">🧮</div>
-      <h1>Times Tables!</h1>
-      <p id="welcome-name" class="subtitle">Let's practise multiplication</p>
-      <div class="level-picker">
-        <h2>Choose your tables</h2>
-        <div class="table-buttons" id="table-buttons"></div>
-        <div class="mode-row">
-          <label class="mode-label">
-            <input type="checkbox" id="mix-mode" />
-            Mix all selected tables together
-          </label>
-        </div>
+  <!-- ===== WELCOME SCREEN ===== -->
+  <div id="screen-welcome" class="screen">
+    <div class="welcome-wrap">
+      <div class="welcome-header">
+        <div class="mascot">🧮</div>
+        <h1>Times Tables!</h1>
+        <p id="welcome-name" class="welcome-sub">Let's practise multiplication</p>
       </div>
-      <button class="btn btn-start" id="btn-start">Let's Go! 🚀</button>
+
+      <div class="section-card">
+        <h2 class="section-title">Choose your tables</h2>
+        <div class="table-grid" id="table-buttons"></div>
+        <label class="mix-label">
+          <input type="checkbox" id="mix-mode" />
+          <span class="mix-toggle"></span>
+          Mix all selected tables
+        </label>
+      </div>
+
+      <button class="btn-primary" id="btn-start">Let's Play! 🚀</button>
     </div>
   </div>
 
-  <!-- GAME SCREEN -->
+  <!-- ===== GAME SCREEN ===== -->
   <div id="screen-game" class="screen">
-    <div class="hud">
-      <div class="hud-item">
-        <span class="hud-label">Score</span>
-        <span class="hud-value" id="hud-score">0</span>
-      </div>
-      <div class="hud-item hud-center">
-        <span class="hud-label">Question</span>
-        <span class="hud-value" id="hud-q">1 / 10</span>
-      </div>
-      <div class="hud-item">
-        <span class="hud-label">Streak 🔥</span>
-        <span class="hud-value" id="hud-streak">0</span>
-      </div>
-    </div>
+    <div class="game-wrap">
 
-    <div class="progress-bar-wrap">
-      <div class="progress-bar" id="progress-bar"></div>
-    </div>
+      <div class="game-hud">
+        <div class="hud-pill">
+          <span class="hud-icon">📝</span>
+          <span id="hud-q">1 / 10</span>
+        </div>
+        <div class="hud-pill hud-score-pill">
+          <span class="hud-icon">⭐</span>
+          <span id="hud-score">0</span>
+        </div>
+        <div class="hud-pill">
+          <span class="hud-icon">🔥</span>
+          <span id="hud-streak">0</span>
+        </div>
+      </div>
 
-    <div class="question-card" id="question-card">
-      <div class="question-text" id="question-text">4 × 7 = ?</div>
-      <div class="feedback" id="feedback"></div>
-    </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-bar"></div>
+      </div>
 
-    <div class="choices" id="choices"></div>
+      <div class="question-card" id="question-card">
+        <div class="question-eq" id="question-text">4 × 7 = ?</div>
+        <div class="feedback-msg" id="feedback"></div>
+      </div>
+
+      <div class="choices-grid" id="choices"></div>
+
+    </div>
   </div>
 
-  <!-- RESULTS SCREEN -->
+  <!-- ===== RESULTS SCREEN ===== -->
   <div id="screen-results" class="screen">
-    <div class="card results-card">
-      <div class="result-emoji" id="result-emoji">🏆</div>
-      <h1 id="result-title">Amazing!</h1>
-      <p id="result-subtitle"></p>
-      <div class="score-breakdown">
-        <div class="breakdown-item">
-          <span class="breakdown-label">Correct</span>
-          <span class="breakdown-value correct" id="res-correct">0</span>
+    <div class="results-wrap">
+      <div class="trophy-emoji" id="result-emoji">🏆</div>
+      <h1 class="result-title" id="result-title">Amazing!</h1>
+      <p class="result-sub" id="result-subtitle"></p>
+      <div class="stars-row" id="result-stars"></div>
+      <div class="stats-row">
+        <div class="stat-box stat-correct">
+          <span class="stat-num" id="res-correct">0</span>
+          <span class="stat-label">Correct</span>
         </div>
-        <div class="breakdown-item">
-          <span class="breakdown-label">Wrong</span>
-          <span class="breakdown-value wrong" id="res-wrong">0</span>
+        <div class="stat-box stat-wrong">
+          <span class="stat-num" id="res-wrong">0</span>
+          <span class="stat-label">Wrong</span>
         </div>
-        <div class="breakdown-item">
-          <span class="breakdown-label">Best Streak</span>
-          <span class="breakdown-value streak" id="res-streak">0</span>
+        <div class="stat-box stat-streak">
+          <span class="stat-num" id="res-streak">0</span>
+          <span class="stat-label">Best streak</span>
         </div>
       </div>
-      <div class="result-stars" id="result-stars"></div>
-      <button class="btn btn-start" id="btn-play-again">Play Again 🎮</button>
-      <button class="btn btn-secondary" id="btn-change-table">Change Tables</button>
+      <button class="btn-primary" id="btn-play-again">Play Again 🎮</button>
+      <button class="btn-ghost" id="btn-change-table">Change tables</button>
     </div>
   </div>
 
