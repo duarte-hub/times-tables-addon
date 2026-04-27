@@ -35,9 +35,19 @@ def index():
 @app.route("/api/options")
 def options():
     opts = get_options()
+
+    # allowed_tables can be a comma-separated string (new) or a list of ints (legacy)
+    raw = opts.get("allowed_tables", "2,3,4,5,6,7,8,9,10")
+    if isinstance(raw, list):
+        allowed_tables = [int(t) for t in raw]
+    else:
+        allowed_tables = [int(t.strip()) for t in str(raw).split(",") if t.strip().isdigit()]
+    if not allowed_tables:
+        allowed_tables = list(range(2, 11))
+
     return jsonify({
         "player_name": opts.get("player_name", "Player"),
-        "allowed_tables": opts.get("allowed_tables", list(range(1, 13))),
+        "allowed_tables": allowed_tables,
         "reward_automation": opts.get("reward_automation", ""),
     })
 
