@@ -13,7 +13,7 @@ homeassistant_api: true
 ingress: true
 ingress_port: 5000
 ports:
-  5000/tcp: 8099
+  5000/tcp: 8181
 ports_description:
   5000/tcp: "Times Tables web interface"
 panel_icon: "mdi:school"
