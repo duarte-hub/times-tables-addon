@@ -8,6 +8,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Apply saved theme immediately to avoid flash -->
+  <script>
+    (function() {
+      var t = localStorage.getItem('tt_theme') || 'default';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
 </head>
 <body>
 
@@ -18,12 +25,31 @@
   <!-- ===== WELCOME SCREEN ===== -->
   <div id="screen-welcome" class="screen">
     <div class="welcome-wrap">
+
       <div class="welcome-header">
-        <div class="mascot">🧮</div>
+        <div class="mascot" id="welcome-avatar">🧮</div>
         <h1>Times Tables!</h1>
-        <p id="welcome-name" class="welcome-sub">Let's practise multiplication</p>
       </div>
 
+      <!-- Name -->
+      <div class="section-card">
+        <h2 class="section-title">Your name</h2>
+        <input type="text" id="player-name-input" class="name-input" placeholder="Enter your name" maxlength="20" />
+      </div>
+
+      <!-- Avatar picker -->
+      <div class="section-card">
+        <h2 class="section-title">Your avatar</h2>
+        <div class="avatar-grid" id="avatar-buttons"></div>
+      </div>
+
+      <!-- Theme picker -->
+      <div class="section-card">
+        <h2 class="section-title">Theme</h2>
+        <div class="theme-grid" id="theme-buttons"></div>
+      </div>
+
+      <!-- Table picker -->
       <div class="section-card">
         <h2 class="section-title">Choose your tables</h2>
         <div class="table-grid" id="table-buttons"></div>
@@ -62,6 +88,9 @@
       </div>
 
       <div class="question-card" id="question-card">
+        <div class="game-avatar-wrap">
+          <span class="game-avatar" id="game-avatar">🦁</span>
+        </div>
         <div class="question-eq" id="question-text">4 × 7 = ?</div>
         <div class="feedback-msg" id="feedback"></div>
       </div>
@@ -75,6 +104,7 @@
   <div id="screen-results" class="screen">
     <div class="results-wrap">
       <div class="trophy-emoji" id="result-emoji">🏆</div>
+      <div class="result-avatar-big" id="result-avatar">🦁</div>
       <h1 class="result-title" id="result-title">Amazing!</h1>
       <p class="result-sub" id="result-subtitle"></p>
       <div class="stars-row" id="result-stars"></div>

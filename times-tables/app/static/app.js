@@ -6,10 +6,91 @@ const TOTAL_QUESTIONS = 10;
 const REWARD_SCORE    = 8;   // min score to trigger HA reward
 const REWARD_STREAK   = 5;   // min streak to trigger HA reward
 
+/* -------- PERSONALISATION -------- */
+const AVATARS = ['🦁','🐼','🦊','🐸','🦄','🐉','🤖','🦋','🐯','🦅'];
+
+const THEMES = [
+  { id: 'default', label: '☀️ Classic', bg: '#ff8c00' },
+  { id: 'space',   label: '🚀 Space',   bg: '#a855f7' },
+  { id: 'ocean',   label: '🌊 Ocean',   bg: '#0891b2' },
+  { id: 'jungle',  label: '🌿 Jungle',  bg: '#16a34a' },
+];
+
+function loadPrefs() {
+  return {
+    avatar:     localStorage.getItem('tt_avatar')      || AVATARS[0],
+    theme:      localStorage.getItem('tt_theme')       || 'default',
+    playerName: localStorage.getItem('tt_player_name') || '',
+  };
+}
+
+function savePref(key, val) {
+  localStorage.setItem(key, val);
+}
+
+function applyTheme(themeId) {
+  document.documentElement.setAttribute('data-theme', themeId);
+}
+
+function syncAvatarEls(emoji) {
+  const welcomeEl = document.getElementById('welcome-avatar');
+  const gameEl    = document.getElementById('game-avatar');
+  const resultEl  = document.getElementById('result-avatar');
+  if (welcomeEl) welcomeEl.textContent = emoji;
+  if (gameEl)    gameEl.textContent    = emoji;
+  if (resultEl)  resultEl.textContent  = emoji;
+}
+
+function buildAvatarButtons(prefs) {
+  const container = document.getElementById('avatar-buttons');
+  container.innerHTML = '';
+  AVATARS.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.className = 'avatar-btn' + (prefs.avatar === emoji ? ' active' : '');
+    btn.textContent = emoji;
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.avatar-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      prefs.avatar = emoji;
+      savePref('tt_avatar', emoji);
+      syncAvatarEls(emoji);
+    });
+    container.appendChild(btn);
+  });
+}
+
+function buildThemeButtons(prefs) {
+  const container = document.getElementById('theme-buttons');
+  container.innerHTML = '';
+  THEMES.forEach(theme => {
+    const btn = document.createElement('button');
+    btn.className = 'theme-btn' + (prefs.theme === theme.id ? ' active' : '');
+    btn.textContent = theme.label;
+    btn.style.background = theme.bg;
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      prefs.theme = theme.id;
+      savePref('tt_theme', theme.id);
+      applyTheme(theme.id);
+    });
+    container.appendChild(btn);
+  });
+}
+
+function animateAvatar(cls) {
+  const el = document.getElementById('game-avatar');
+  if (!el) return;
+  el.classList.remove('pop', 'shake', 'dance');
+  void el.offsetWidth;
+  el.classList.add(cls);
+  if (cls !== 'dance') setTimeout(() => el.classList.remove(cls), 500);
+}
+
 /* -------- BOOT -------- */
 window.addEventListener("DOMContentLoaded", async () => {
 
-  /* --- DOM refs (inside DOMContentLoaded to guarantee elements exist) --- */
+  /* --- DOM refs --- */
   const screens = {
     welcome: document.getElementById("screen-welcome"),
     game:    document.getElementById("screen-game"),
@@ -27,10 +108,28 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (res.ok) config = await res.json();
   } catch (_) { /* dev / offline */ }
 
+  /* --- Load & apply personalisation prefs --- */
+  const prefs = loadPrefs();
+  applyTheme(prefs.theme);
+  syncAvatarEls(prefs.avatar);
+  buildAvatarButtons(prefs);
+  buildThemeButtons(prefs);
+
+  /* --- Player name input --- */
+  const nameInput = document.getElementById('player-name-input');
+  // Pre-fill: localStorage name takes priority, then config name (if not generic)
+  const savedName = prefs.playerName || (config.player_name !== 'Player' ? config.player_name : '');
+  nameInput.value = savedName;
+  nameInput.placeholder = config.player_name || 'Enter your name';
+  nameInput.addEventListener('input', () => {
+    prefs.playerName = nameInput.value.trim();
+    savePref('tt_player_name', nameInput.value.trim());
+  });
+
   /* --- Game state --- */
   const state = {
-    selectedTables: [...config.allowed_tables].slice(0, 3), // default: first 3 allowed
-    mixMode:  false,
+    selectedTables: [...config.allowed_tables].slice(0, 3),
+    mixMode:   false,
     questions: [],
     currentQ:  0,
     score:     0,
@@ -39,12 +138,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     wrongCount:0,
     answering: false,
   };
-
-  /* ---- Welcome screen setup ---- */
-  const nameEl = document.getElementById("welcome-name");
-  if (config.player_name && config.player_name !== "Player") {
-    nameEl.textContent = `Hi ${config.player_name}! 👋 Let's practise!`;
-  }
 
   buildTableButtons(config.allowed_tables, state);
 
@@ -55,12 +148,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("btn-start").addEventListener("click", () => {
     if (state.selectedTables.length === 0) return;
     showScreen(screens, "game");
-    startRound(state, screens, config);
+    startRound(state, screens, config, prefs);
   });
 
   document.getElementById("btn-play-again").addEventListener("click", () => {
     showScreen(screens, "game");
-    startRound(state, screens, config);
+    startRound(state, screens, config, prefs);
   });
 
   document.getElementById("btn-change-table").addEventListener("click", () => {
@@ -96,7 +189,7 @@ function buildTableButtons(allowedTables, state) {
         state.selectedTables.push(t);
         btn.classList.add("active");
       } else {
-        if (state.selectedTables.length === 1) return; // keep at least one
+        if (state.selectedTables.length === 1) return;
         state.selectedTables.splice(idx, 1);
         btn.classList.remove("active");
       }
@@ -108,15 +201,22 @@ function buildTableButtons(allowedTables, state) {
 /* ============================================================
    GAME ROUND
    ============================================================ */
-function startRound(state, screens, config) {
+function startRound(state, screens, config, prefs) {
   state.questions  = generateQuestions(state);
   state.currentQ   = 0;
   state.score      = 0;
   state.streak     = 0;
   state.bestStreak = 0;
   state.wrongCount = 0;
+
+  // Sync avatar in case it changed on welcome screen
+  syncAvatarEls(prefs.avatar);
+  // Stop any dance animation from previous round
+  const gameAvatar = document.getElementById('game-avatar');
+  if (gameAvatar) gameAvatar.classList.remove('dance');
+
   updateHUD(state);
-  nextQuestion(state, screens, config);
+  nextQuestion(state, screens, config, prefs);
 }
 
 /* ============================================================
@@ -138,9 +238,9 @@ function generateQuestions(state) {
 /* ============================================================
    SHOW QUESTION
    ============================================================ */
-function nextQuestion(state, screens, config) {
+function nextQuestion(state, screens, config, prefs) {
   if (state.currentQ >= TOTAL_QUESTIONS) {
-    showResults(state, screens, config);
+    showResults(state, screens, config, prefs);
     return;
   }
 
@@ -158,7 +258,7 @@ function nextQuestion(state, screens, config) {
     const btn = document.createElement("button");
     btn.className = "choice-btn";
     btn.textContent = val;
-    btn.addEventListener("click", () => handleAnswer(val, q.answer, btn, state, screens, config));
+    btn.addEventListener("click", () => handleAnswer(val, q.answer, btn, state, screens, config, prefs));
     grid.appendChild(btn);
   });
 
@@ -168,7 +268,7 @@ function nextQuestion(state, screens, config) {
 /* ============================================================
    ANSWER HANDLING
    ============================================================ */
-function handleAnswer(chosen, correct, btn, state, screens, config) {
+function handleAnswer(chosen, correct, btn, state, screens, config, prefs) {
   if (!state.answering) return;
   state.answering = false;
   document.querySelectorAll(".choice-btn").forEach(b => b.disabled = true);
@@ -180,8 +280,9 @@ function handleAnswer(chosen, correct, btn, state, screens, config) {
     btn.classList.add("correct-ans");
     showFeedback("correct", pickPhrase());
     animateCard("pop");
+    animateAvatar("pop");
     updateHUD(state);
-    setTimeout(() => { state.currentQ++; nextQuestion(state, screens, config); }, 850);
+    setTimeout(() => { state.currentQ++; nextQuestion(state, screens, config, prefs); }, 850);
   } else {
     state.streak = 0;
     state.wrongCount++;
@@ -191,30 +292,46 @@ function handleAnswer(chosen, correct, btn, state, screens, config) {
     });
     showFeedback("wrong", `${correct} was the answer`);
     animateCard("shake");
+    animateAvatar("shake");
     updateHUD(state);
-    setTimeout(() => { state.currentQ++; nextQuestion(state, screens, config); }, 1200);
+    setTimeout(() => { state.currentQ++; nextQuestion(state, screens, config, prefs); }, 1200);
   }
 }
 
 /* ============================================================
    RESULTS
    ============================================================ */
-function showResults(state, screens, config) {
+function showResults(state, screens, config, prefs) {
   showScreen(screens, "results");
 
   const { score, wrongCount, bestStreak } = state;
+  const playerName = prefs.playerName || config.player_name || '';
+  const nameStr = playerName && playerName !== 'Player' ? `, ${playerName}` : '';
+
   let emoji, title, subtitle;
 
   if (score === TOTAL_QUESTIONS) {
-    emoji = "🏆"; title = "PERFECT!"; subtitle = "You got every single one right!";
+    emoji = "🏆";
+    title = "PERFECT!";
+    subtitle = `${score} out of ${TOTAL_QUESTIONS}${nameStr} — flawless!`;
     launchConfetti(220);
+    animateResultAvatar('dance');
   } else if (score >= REWARD_SCORE) {
-    emoji = "🌟"; title = "Brilliant!"; subtitle = `${score} out of ${TOTAL_QUESTIONS} — you're a star!`;
+    emoji = "🌟";
+    title = "Brilliant!";
+    subtitle = `${score} out of ${TOTAL_QUESTIONS}${nameStr} — you're a star!`;
     launchConfetti(110);
+    animateResultAvatar('dance');
   } else if (score >= 5) {
-    emoji = "😊"; title = "Good try!"; subtitle = `${score} out of ${TOTAL_QUESTIONS} — keep going!`;
+    emoji = "😊";
+    title = "Good try!";
+    subtitle = `${score} out of ${TOTAL_QUESTIONS} — keep going!`;
+    animateResultAvatar('');
   } else {
-    emoji = "💪"; title = "Keep going!"; subtitle = "Practice makes perfect — you've got this!";
+    emoji = "💪";
+    title = "Keep going!";
+    subtitle = "Practice makes perfect — you've got this!";
+    animateResultAvatar('');
   }
 
   document.getElementById("result-emoji").textContent    = emoji;
@@ -228,6 +345,14 @@ function showResults(state, screens, config) {
   if (score >= REWARD_SCORE || bestStreak >= REWARD_STREAK) {
     fireReward({ score, total: TOTAL_QUESTIONS, streak: bestStreak, perfect: score === TOTAL_QUESTIONS });
   }
+}
+
+function animateResultAvatar(cls) {
+  const el = document.getElementById('result-avatar');
+  if (!el) return;
+  el.classList.remove('dance');
+  void el.offsetWidth;
+  if (cls) el.classList.add(cls);
 }
 
 function starsFor(score) {
@@ -278,7 +403,7 @@ function showFeedback(type, msg) {
 function animateCard(cls) {
   const card = document.getElementById("question-card");
   card.classList.remove("shake", "pop");
-  void card.offsetWidth; // force reflow
+  void card.offsetWidth;
   card.classList.add(cls);
 }
 
